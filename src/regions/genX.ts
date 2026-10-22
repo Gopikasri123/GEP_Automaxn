@@ -9,13 +9,13 @@ export const GEN_X: RegionBehaviour = {
 
   siteUrl: (market) => market.baseUrl,
 
-  async clearLaunchPopups({ home, header, popups, market }) {
+  async clearLaunchPopups({ home, header, popups, market, signedInSession }) {
     // Tosca: GenX and GenY
-    await header.signOutIfLoggedIn();
+    if (!signedInSession) await header.signOutIfLoggedIn();
     await popups.cookieBanner.acceptIfShown();
     // Tosca: Domain Check for Genx-UK
     await home.selectDomainIfRequired(market.country, market.domain);
-    await header.signOutIfLoggedIn();
+    if (!signedInSession) await header.signOutIfLoggedIn();
     await popups.launchPopup.confirmIfShown();
   },
 

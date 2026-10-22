@@ -1,4 +1,4 @@
-import { Page, Locator, Download, expect } from '@playwright/test';
+import { Page, Locator, Download, Response, expect } from '@playwright/test';
 
 /**
  * Shared helpers for page objects and components. Pages build their actions and checks from these
@@ -21,11 +21,11 @@ export abstract class BasePage {
    */
   protected async isVisibleWithin(locator: Locator, timeout = 5000): Promise<boolean> {
     const deadline = Date.now() + timeout;
-    do {
+    while (true) {
       if (await locator.first().isVisible()) return true;
+      if (Date.now() >= deadline) return false;
       await this.page.waitForTimeout(250);
-    } while (Date.now() < deadline);
-    return false;
+    }
   }
 
   /** For optional popups: click only if the element appears within the timeout. */
@@ -33,6 +33,23 @@ export abstract class BasePage {
     if (!(await this.isVisibleWithin(locator, timeout))) return false;
     await locator.first().click();
     return true;
+  }
+
+  /**
+   * For optional popups that block the next page: clicks the popup if it appears, but stops waiting
+   * as soon as `done()` is true (e.g. the next page has opened), so an absent popup costs no time.
+   */
+  protected async clickIfVisibleUntil(locator: Locator, done: () => boolean, timeout: number): Promise<boolean> {
+    const deadline = Date.now() + timeout;
+    while (!done()) {
+      if (await locator.first().isVisible()) {
+        await locator.first().click();
+        return true;
+      }
+      if (Date.now() >= deadline) return false;
+      await this.page.waitForTimeout(250);
+    }
+    return false;
   }
 
   // ---------------------------------------------------------------- Browser
@@ -45,6 +62,11 @@ export abstract class BasePage {
   /** Reloads the current page. */
   protected async reloadPage(): Promise<void> {
     await this.page.reload();
+  }
+
+  /** A value the site keeps in the browser's local storage (e.g. a saved cookie consent), or null. */
+  protected async readLocalStorage(key: string): Promise<string | null> {
+    return this.page.evaluate((name) => window.localStorage.getItem(name), key);
   }
 
   /** The address of the current page. */
@@ -105,6 +127,20 @@ export abstract class BasePage {
   protected async clickAndWaitForDownload(locator: Locator): Promise<Download> {
     const [download] = await Promise.all([this.page.waitForEvent('download'), locator.click()]);
     return download;
+  }
+
+  /**
+   * Clicks and returns the first server response that `matches` (e.g. the request the click sends),
+   * or null when none arrives within the timeout. Clicks only once.
+   */
+  protected async clickAndWaitForResponse(
+    locator: Locator,
+    matches: (response: Response) => boolean,
+    timeout: number,
+  ): Promise<Response | null> {
+    const response = this.page.waitForResponse(matches, { timeout }).catch(() => null);
+    await locator.click();
+    return response;
   }
 
   /** The element's visible text, trimmed. */

@@ -10,3 +10,7 @@ test-results-*/
 blob-report/
 playwright/.cache/
 reports/
+# Shared Chrome profile (CHROME_PROFILE=true): holds login cookies
+.chrome-profile/
+# Saved login sessions (SIGN_IN_ONCE=true): hold login cookies
+.auth/

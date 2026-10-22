@@ -29,7 +29,23 @@ export const ENV = {
   timeout: Number(read('TIMEOUT')) || 60000,
   // Headed locally so the run can be watched; headless on CI or with HEADLESS=true.
   headless: !!process.env.CI || read('HEADLESS') === 'true',
+  // CHROME_PROFILE=true: GEP tests reuse one Chrome profile folder (cache kept between tests) instead of a fresh browser.
+  chromeProfile: read('CHROME_PROFILE') === 'true',
+  // SIGN_IN_ONCE=true: sign in once per market before the first test (auth setup) and sign out after the last one
+  // (auth teardown); the tests start from that saved session instead of signing out and in each time.
+  signInOnce: read('SIGN_IN_ONCE') === 'true',
 };
+
+/** Folder of the saved login sessions (git-ignored; holds login cookies). */
+export const AUTH_DIR = path.resolve(__dirname, '..', '..', '.auth');
+
+/** Saved session (cookies + local storage) of one environment + market, written by the auth setup. */
+export function authFileFor(env: TestEnv, marketId: MarketId): string {
+  return path.join(AUTH_DIR, `${env}-${marketId}.json`);
+}
+
+/** Folder of the shared Chrome profile (git-ignored; holds cookies). Delete it to start fresh. */
+export const CHROME_PROFILE_DIR = path.resolve(__dirname, '..', '..', '.chrome-profile');
 
 /**
  * Environment to run: TEST_ENV in .env or the shell (default qa). One environment per run;

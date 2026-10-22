@@ -9,7 +9,7 @@ export class GepFreeItemPopup extends BasePage {
   }
 
   /** Tosca: Verify Free Item Visible then select. */
-  async continueWithoutFreeItemIfShown(): Promise<boolean> {
-    return this.clickIfVisible(this.freeItemContinueWithoutButton);
+  async continueWithoutFreeItemIfShown(timeout?: number): Promise<boolean> {
+    return this.clickIfVisible(this.freeItemContinueWithoutButton, timeout);
   }
 }

@@ -9,7 +9,7 @@ export class GepControlledSubstancesPopup extends BasePage {
   }
 
   /** Tosca: Close Controlled Substances Form. */
-  async skipIfShown(): Promise<boolean> {
-    return this.clickIfVisible(this.controlledSubstancesConfirmSkipButton);
+  async skipIfShown(timeout?: number): Promise<boolean> {
+    return this.clickIfVisible(this.controlledSubstancesConfirmSkipButton, timeout);
   }
 }

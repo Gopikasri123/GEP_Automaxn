@@ -72,23 +72,38 @@ export class GepShoppingCartPage extends BasePage {
   async proceedToShippingAndBilling(): Promise<void> {
     await this.expectVisible(this.cartProceedToShippingBillingButton);
     await this.click(this.cartProceedToShippingBillingButton);
+    await this.dismissCheckoutPopups(15000);
 
-    await this.popups.inventoryNotice.continueIfShown();
-    await this.popups.freeItem.continueWithoutFreeItemIfShown();
-    // Tosca clicks "Shipping and billing" again after the License / Controlled Substances popups are dismissed.
-    if (await this.popups.license.skipIfShown()) {
-      await this.click(this.cartProceedToShippingBillingButton);
-    }
-    if (await this.popups.controlledSubstances.skipIfShown()) {
-      await this.click(this.cartProceedToShippingBillingButton);
-    }
     // The first click can be swallowed while the cart is still loading; retry until the page changes.
     await this.retryUntilPasses(async () => {
-      if (!this.currentUrl().includes('shippingandbilling')) {
+      if (!this.onShippingAndBilling()) {
         await this.click(this.cartProceedToShippingBillingButton);
-        await this.popups.inventoryNotice.continueIfShown();
+        await this.dismissCheckoutPopups(10000);
       }
       await this.expectUrl(/shippingandbilling/, 10000);
     }, 60000);
+  }
+
+  private onShippingAndBilling(): boolean {
+    return this.currentUrl().includes('shippingandbilling');
+  }
+
+  /**
+   * Handles the popups that can follow "Proceed To Shipping & Billing" (inventory notice, free item, licence,
+   * controlled substances) until Shipping & Billing opens or the timeout ends. It stops as soon as the page
+   * has changed, so popups that are not shown cost no waiting time.
+   */
+  private async dismissCheckoutPopups(timeout: number): Promise<void> {
+    const deadline = Date.now() + timeout;
+    while (!this.onShippingAndBilling() && Date.now() < deadline) {
+      if (await this.popups.inventoryNotice.continueIfShown(0)) continue;
+      if (await this.popups.freeItem.continueWithoutFreeItemIfShown(0)) continue;
+      // Tosca clicks "Shipping and billing" again after the License / Controlled Substances popups are dismissed.
+      if ((await this.popups.license.skipIfShown(0)) || (await this.popups.controlledSubstances.skipIfShown(0))) {
+        await this.click(this.cartProceedToShippingBillingButton);
+        continue;
+      }
+      await this.page.waitForTimeout(250);
+    }
   }
 }

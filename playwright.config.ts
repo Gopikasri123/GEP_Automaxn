@@ -47,17 +47,24 @@ export default defineConfig<GepOptions>({
   projects: [
     // GEP: one project per market selected with MARKET in .env (default us), named <env>-<market>, e.g. qa-us.
     // The site URL comes from the test data database (market fixture), so there is no baseURL here.
-    ...selectedMarketIds(testEnv).map((marketId) => ({
-      name: `${testEnv}-${marketId}`,
-      // GEP tests place real orders: on prod only the tests tagged @prod-safe run.
-      ...(testEnv === 'prod' ? { grep: /@prod-safe/ } : {}),
-      use: {
-        ...desktopChrome,
-        ...browserWindow,
-        testEnv,
-        marketId,
-      },
-    })),
+    ...selectedMarketIds(testEnv).flatMap((marketId) => {
+      const name = `${testEnv}-${marketId}`;
+      const use = { ...desktopChrome, ...browserWindow, testEnv, marketId };
+      const tests = {
+        name,
+        // GEP tests place real orders: on prod only the tests tagged @prod-safe run.
+        ...(testEnv === 'prod' ? { grep: /@prod-safe/ } : {}),
+        use,
+      };
+      if (!ENV.signInOnce) return [tests];
+      // SIGN_IN_ONCE=true: <name>-auth-setup signs in once and saves the session before the tests,
+      // <name>-auth-teardown signs out after the last one (tests/auth).
+      return [
+        { name: `${name}-auth-setup`, testMatch: /auth\.setup\.ts/, teardown: `${name}-auth-teardown`, use },
+        { name: `${name}-auth-teardown`, testMatch: /auth\.teardown\.ts/, use },
+        { ...tests, dependencies: [`${name}-auth-setup`] },
+      ];
+    }),
   ],
 
   outputDir: runFolder('test-results'),

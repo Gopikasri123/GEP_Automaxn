@@ -9,13 +9,13 @@ export const GEN_Y: RegionBehaviour = {
   // Tosca: GenY "To remove any buffers" adds ?<random>=<random> so Akamai doesn't serve a cached page
   siteUrl: (market) => withCacheBuster(market.baseUrl),
 
-  async clearLaunchPopups({ header, popups }) {
+  async clearLaunchPopups({ header, popups, signedInSession }) {
     // Tosca: GenX and GenY
-    await header.signOutIfLoggedIn();
+    if (!signedInSession) await header.signOutIfLoggedIn();
     await popups.cookieBanner.acceptIfShown();
     // Tosca: "Close the ad popup" is in the Else branch, which only GenY reaches
     await popups.adPopup.closeIfShown();
-    await header.signOutIfLoggedIn();
+    if (!signedInSession) await header.signOutIfLoggedIn();
     await popups.launchPopup.confirmIfShown();
   },
 

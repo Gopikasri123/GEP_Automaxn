@@ -64,9 +64,15 @@ export class GepHeader extends BasePage {
     await this.expectVisible(this.headerAccountMenu.or(this.headerAccountMenuExpandButton).first(), 60000);
   }
 
+  /** True when the header shows the account menu. Waits only until the header shows either Sign In or the menu. */
+  async isLoggedIn(timeout = 3000): Promise<boolean> {
+    await this.isVisibleWithin(this.headerAccountMenu.or(this.headerSignInButton), timeout);
+    return this.isVisibleWithin(this.headerAccountMenu, 0);
+  }
+
   /** Tosca: If "Header | sign out > IMG" exists, sign out first so the test starts logged out. */
   async signOutIfLoggedIn(): Promise<void> {
-    if (!(await this.isVisibleWithin(this.headerAccountMenu, 3000))) return;
+    if (!(await this.isLoggedIn())) return;
     // Clicking the menu opens the dashboard; the Sign Out link only shows on hover.
     await this.hover(this.headerAccountMenu);
     await this.expectVisible(this.headerSignOutLink);
@@ -81,7 +87,7 @@ export class GepHeader extends BasePage {
 
   /** Waits until the header cart count shows at least one item. */
   async expectCartNotEmpty(): Promise<void> {
-    await this.expectVisible(this.headerCartCountText);
+    await this.expectVisible(this.headerCartCountText,90000);
   }
 
   /** Tosca: Header |Cart > cart-icon. */

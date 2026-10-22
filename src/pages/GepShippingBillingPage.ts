@@ -183,7 +183,8 @@ export class GepShippingBillingPage extends BasePage {
     await this.retryUntilPasses(async () => {
       if (!/revieworder/i.test(this.currentUrl())) {
         await this.click(this.reviewOrderButton);
-        await this.clickIfVisible(this.budgetDialogSubmitOrderButton, 30000);
+        // Stops waiting for the budget overlay as soon as Review Order has opened.
+        await this.clickIfVisibleUntil(this.budgetDialogSubmitOrderButton, () => /revieworder/i.test(this.currentUrl()), 30000);
       }
       await this.expectUrl(/revieworder/i, 15000);
     }, 90000);

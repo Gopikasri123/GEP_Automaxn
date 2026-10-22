@@ -15,7 +15,8 @@ export class GepOrderConfirmationPage extends BasePage {
 
   /** Tosca: Checkout | Order Confirmation (Verify "Your order has been submitted !"). */
   async expectOrderSubmitted(): Promise<void> {
-    await this.expectVisible(this.orderSubmittedText);
+    // Placing the order can take well over the default 10 s on the QA sites; the wait ends as soon as the message shows.
+    await this.expectVisible(this.orderSubmittedText, 90000);
   }
 
   /** Tosca: FetchOrderNumber in Order Confirmation Page (InnerText -> Ordernumber). */

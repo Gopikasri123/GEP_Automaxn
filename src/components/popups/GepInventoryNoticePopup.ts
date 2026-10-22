@@ -9,7 +9,7 @@ export class GepInventoryNoticePopup extends BasePage {
   }
 
   /** Continue goes on to Shipping & Billing. */
-  async continueIfShown(): Promise<boolean> {
-    return this.clickIfVisible(this.inventoryNoticeContinueButton);
+  async continueIfShown(timeout?: number): Promise<boolean> {
+    return this.clickIfVisible(this.inventoryNoticeContinueButton, timeout);
   }
 }

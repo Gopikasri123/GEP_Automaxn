@@ -9,7 +9,7 @@ export class GepLicensePopup extends BasePage {
   }
 
   /** Tosca: If- License Popup Displayed. */
-  async skipIfShown(): Promise<boolean> {
-    return this.clickIfVisible(this.licenseSkipAndCompleteLaterButton);
+  async skipIfShown(timeout?: number): Promise<boolean> {
+    return this.clickIfVisible(this.licenseSkipAndCompleteLaterButton, timeout);
   }
 }

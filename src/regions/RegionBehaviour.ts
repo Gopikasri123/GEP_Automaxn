@@ -9,7 +9,14 @@ import type { GepOrderDetailsPage } from '../pages/GepOrderDetailsPage';
 /** Tosca "Gen" condition from TDM: which UI variant a site uses. */
 export type RegionName = 'genx' | 'geny' | 'genz';
 
-export type LaunchContext = { home: GepHomePage; header: GepHeader; popups: GepPopups; market: Market };
+export type LaunchContext = {
+  home: GepHomePage;
+  header: GepHeader;
+  popups: GepPopups;
+  market: Market;
+  /** SIGN_IN_ONCE: the test starts from the saved signed-in session, so the stale-session sign-out is skipped. */
+  signedInSession: boolean;
+};
 
 /**
  * Everything that differs between the Gen X / Gen Y / Gen Z sites. Flows and tests call these
