@@ -10,5 +10,5 @@
     "types": ["node", "@playwright/test"]
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules", "playwright-report", "monocart-report", "test-results"]
+  "exclude": ["node_modules", "playwright-report", "monocart-report", "test-results", "reports"]
 }

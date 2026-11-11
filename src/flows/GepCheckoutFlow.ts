@@ -6,6 +6,7 @@ import type { GepShoppingCartPage } from '../pages/GepShoppingCartPage';
 import type { GepShippingBillingPage, RecurringOrderDetails } from '../pages/GepShippingBillingPage';
 import type { GepReviewOrderPage } from '../pages/GepReviewOrderPage';
 import type { GepOrderConfirmationPage } from '../pages/GepOrderConfirmationPage';
+import { COMMON } from '../../data/common';
 
 type Deps = {
   market: Market;
@@ -34,6 +35,8 @@ export class GepCheckoutFlow {
 
   /** Tosca: Navigate to shipping and billing page (including the cart popups). */
   async proceedToShippingAndBilling(): Promise<void> {
+    // Cart lines with the required text field (e.g. reordered items) block checkout until it is filled.
+    await this.deps.shoppingCartPage.fillRequiredTextFieldsIfShown(COMMON.requiredProductText);
     await this.deps.shoppingCartPage.proceedToShippingAndBilling();
     await this.deps.shippingBillingPage.expectPageLoaded();
   }

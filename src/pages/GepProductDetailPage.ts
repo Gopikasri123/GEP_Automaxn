@@ -17,6 +17,11 @@ export class GepProductDetailPage extends BasePage {
     return this.page.getByRole('combobox', { name: /Required/i });
   }
 
+  // Tosca: (not in export) PDP > Text Form Required*   | required "test*" text field on some QA products; Add To Cart stays disabled until filled
+  private get pdpRequiredTextInput(): Locator {
+    return this.page.getByRole('textbox', { name: /^Text Form Required/ });
+  }
+
   // Tosca: Select the dropdown value > users   | first/only COM option (unverified)
   private get pdpComUsersOption(): Locator {
     return this.todo('GepProductDetailPage.pdpComUsersOption', 'Select the dropdown value > users');
@@ -71,6 +76,13 @@ export class GepProductDetailPage extends BasePage {
     if (!(await this.isVisibleWithin(this.pdpComDropdown, 3000))) return false;
     await this.click(this.pdpComDropdown);
     await this.click(this.pdpComUsersOption);
+    return true;
+  }
+
+  /** Fills the product's required text field (not in Tosca). Only runs when the field exists. */
+  async fillRequiredTextIfShown(value: string): Promise<boolean> {
+    if (!(await this.isVisibleWithin(this.pdpRequiredTextInput, 3000))) return false;
+    await this.typeLikeUser(this.pdpRequiredTextInput.first(), value);
     return true;
   }
 

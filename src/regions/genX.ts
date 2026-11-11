@@ -16,7 +16,9 @@ export const GEN_X: RegionBehaviour = {
     // Tosca: Domain Check for Genx-UK
     await home.selectDomainIfRequired(market.country, market.domain);
     if (!signedInSession) await header.signOutIfLoggedIn();
-    await popups.launchPopup.confirmIfShown();
+    // The popup comes with the page, so once the header has rendered a short wait is enough (it saved 5 s per test).
+    else await header.isLoggedIn();
+    await popups.launchPopup.confirmIfShown(2000);
   },
 
   // Tosca: Run Only for Gen X Countries > Bill on Account

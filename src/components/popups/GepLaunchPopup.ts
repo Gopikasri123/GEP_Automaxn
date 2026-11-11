@@ -9,7 +9,7 @@ export class GepLaunchPopup extends BasePage {
   }
 
   /** Tosca: FR popup / "Launch popup - confirm button" (Confirmar). */
-  async confirmIfShown(): Promise<boolean> {
-    return this.clickIfVisible(this.launchPopupConfirmButton);
+  async confirmIfShown(timeout = 5000): Promise<boolean> {
+    return this.clickIfVisible(this.launchPopupConfirmButton, timeout);
   }
 }

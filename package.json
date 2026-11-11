@@ -9,7 +9,7 @@
     "list": "playwright test --list --reporter=list",
     "locators": "node scripts/generate-locators-report.js",
     "db:check": "node scripts/check-test-data-db.mjs",
-    "report": "playwright show-report",
+    "report": "node scripts/open-latest-report.mjs",
     "check": "npm run typecheck && npm run list",
     "heal_single_TS": "node heal_single_TS.mjs",
     "verify_flow": "node verify_flow.mjs"

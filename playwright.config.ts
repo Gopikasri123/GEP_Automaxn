@@ -15,6 +15,13 @@ const browserWindow = ENV.headless
 const testEnv = selectedTestEnv();
 const runFolder = (folder: string) => (testEnv === 'qa' ? folder : `${folder}-${testEnv}`);
 
+// Reports of each run go to reports/GEP_Report_<YYYY-MM-DD>_<HH-mm-ss>/ (html/ and monocart/), so earlier runs are kept.
+// The stamp is stored in the environment because workers load this file again and must not get a new one.
+const pad = (n: number) => String(n).padStart(2, '0');
+const now = new Date();
+process.env.GEP_REPORT_STAMP ??= `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+const reportFolder = `reports/GEP_Report_${process.env.GEP_REPORT_STAMP}`;
+
 export default defineConfig<GepOptions>({
   testDir: './tests',
   timeout: ENV.timeout,
@@ -29,8 +36,8 @@ export default defineConfig<GepOptions>({
 
   reporter: [
     ['list'],
-    ['html', { outputFolder: runFolder('playwright-report'), open: 'never' }],
-    ['monocart-reporter', { name: 'Automation Test Report', outputFile: `${runFolder('monocart-report')}/index.html` }],
+    ['html', { outputFolder: `${reportFolder}/html`, open: 'never' }],
+    ['monocart-reporter', { name: 'Automation Test Report', outputFile: `${reportFolder}/monocart/index.html` }],
     ['json', { outputFile: `${runFolder('test-results')}/results.json` }],
   ],
 
@@ -39,8 +46,8 @@ export default defineConfig<GepOptions>({
     actionTimeout: 30000,
     navigationTimeout: ENV.timeout,
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-    trace: 'retain-on-failure',
+    video: ENV.video,
+    trace: ENV.trace,
     ignoreHTTPSErrors: true,
   },
 

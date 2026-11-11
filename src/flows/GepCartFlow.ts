@@ -4,6 +4,7 @@ import type { GepHeader } from '../components/GepHeader';
 import type { GepSearchResultsPage } from '../pages/GepSearchResultsPage';
 import type { GepProductDetailPage } from '../pages/GepProductDetailPage';
 import type { GepShoppingCartPage } from '../pages/GepShoppingCartPage';
+import { COMMON } from '../../data/common';
 
 type Deps = {
   market: Market;
@@ -51,6 +52,8 @@ export class GepCartFlow {
       // Tosca: If Country is FR (ValidCountries = FR) > If fixertype exist
       await productDetailPage.selectFixerTypeIfRequired(market.country);
     }
+    // Add To Cart stays disabled until the product's required text field (when it has one) is filled.
+    await productDetailPage.fillRequiredTextIfShown(COMMON.requiredProductText);
     if (options.quantity !== undefined) await productDetailPage.enterQuantity(options.quantity);
     await productDetailPage.clickAddToCart();
     if (options.handlePdpOptions) await productDetailPage.confirmBackorderIfShown();

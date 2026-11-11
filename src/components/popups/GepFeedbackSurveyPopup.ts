@@ -15,7 +15,7 @@ export class GepFeedbackSurveyPopup extends BasePage {
 
   /** Tosca: Close Customer FeedBack survey popup (GenX order confirmation). */
   async closeIfShown(): Promise<boolean> {
-    if (await this.clickIfVisible(this.feedbackSurveyCloseAltButton, 3000)) return true;
-    return this.clickIfVisible(this.feedbackSurveyCloseButton, 3000);
+    // Wait for either close button at once, so an absent survey costs 3 s instead of 6 s.
+    return this.clickIfVisible(this.feedbackSurveyCloseAltButton.or(this.feedbackSurveyCloseButton), 3000);
   }
 }

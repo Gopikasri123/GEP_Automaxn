@@ -9,6 +9,7 @@ monocart-report-*/
 test-results-*/
 blob-report/
 playwright/.cache/
+# Timestamped reports of each run: reports/GEP_Report_<date>_<time>/ (html/ and monocart/)
 reports/
 # Shared Chrome profile (CHROME_PROFILE=true): holds login cookies
 .chrome-profile/

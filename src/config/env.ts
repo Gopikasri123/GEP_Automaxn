@@ -34,6 +34,14 @@ export const ENV = {
   // SIGN_IN_ONCE=true: sign in once per market before the first test (auth setup) and sign out after the last one
   // (auth teardown); the tests start from that saved session instead of signing out and in each time.
   signInOnce: read('SIGN_IN_ONCE') === 'true',
+  // VIDEO (off | on | retain-on-failure | on-first-retry). Default: retain-on-failure on CI, off locally, because
+  // live video encoding slows a run a lot on low-end laptops. Traces and screenshots of failures are still kept.
+  video: (read('VIDEO') || (process.env.CI ? 'retain-on-failure' : 'off')) as
+    'off' | 'on' | 'retain-on-failure' | 'on-first-retry',
+  // TRACE (same values). Default: retain-on-failure on CI, off locally: recording a trace snapshots the page on every
+  // action. A failed test still gets its screenshot and page snapshot (error-context.md, used by the heal script).
+  trace: (read('TRACE') || (process.env.CI ? 'retain-on-failure' : 'off')) as
+    'off' | 'on' | 'retain-on-failure' | 'on-first-retry',
 };
 
 /** Folder of the saved login sessions (git-ignored; holds login cookies). */

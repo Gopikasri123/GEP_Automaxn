@@ -159,7 +159,7 @@ TEST_ENV + MARKET  ->  environments   (base_url, country, domain, region, date_f
 | `npm run test:orders` | The GEP order tests |
 | `npm run test:demo` | The Demo Web Shop tests (project `demo-webshop`) |
 | `npx playwright test --grep @GEP2-36899` | One test case |
-| `npm run report` | Open the last HTML report (also `monocart-report/index.html`) |
+| `npm run report` | Open the newest HTML report in `reports/` (`npm run report -- <folder>` for an older run) |
 | `npm run check` | Type check + list tests (what CI runs) |
 | `npm run locators` | Rebuild `LOCATORS_TODO.md` from the code |
 | `npm run db:check` | Check the test data database for `TEST_ENV` |
@@ -170,8 +170,9 @@ Switch market by changing `MARKET` in `.env`, e.g. `MARKET=uk-dental` or `MARKET
 
 Switch environment with `TEST_ENV` (`qa`, `uat`, `prod`); a value set in the shell wins over `.env`. To run
 environments side by side, start one run per environment, e.g. in PowerShell `$env:TEST_ENV='uat'; npx playwright test`.
-QA writes to the usual `test-results/`, `playwright-report/` and `monocart-report/`; other environments write to
-`<folder>-<env>`, so parallel runs don't overwrite each other. Each run still uses one worker, because the tests on one
+Every run saves its reports in its own folder, `reports/GEP_Report_<YYYY-MM-DD>_<HH-mm-ss>/` (`html/` and
+`monocart/index.html`), so earlier reports are kept. QA writes its raw results to the usual `test-results/`; other
+environments write to `test-results-<env>`, so parallel runs don't overwrite each other. Each run still uses one worker, because the tests on one
 market share one account and cart. `TEST_ENV=prod` refuses to start without `ALLOW_PROD=true` and then runs only tests
 tagged `@prod-safe` (GEP tests place real orders). UAT and prod need their rows in the database and their products in
 `data/marketData.ts`. Browsers are visible locally; set `HEADLESS=true` to hide them (CI is always headless).

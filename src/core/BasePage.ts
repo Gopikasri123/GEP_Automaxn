@@ -55,13 +55,15 @@ export abstract class BasePage {
   // ---------------------------------------------------------------- Browser
 
   /** Opens a URL in the current tab. */
+  // Navigation waits for the HTML, not the "load" event: "load" also waits for every image, ad and analytics script
+  // (5-10 s per page on QA). The next action auto-waits for the element it needs.
   protected async openUrl(url: string): Promise<void> {
-    await this.page.goto(url);
+    await this.page.goto(url, { waitUntil: 'domcontentloaded' });
   }
 
   /** Reloads the current page. */
   protected async reloadPage(): Promise<void> {
-    await this.page.reload();
+    await this.page.reload({ waitUntil: 'domcontentloaded' });
   }
 
   /** A value the site keeps in the browser's local storage (e.g. a saved cookie consent), or null. */

@@ -65,7 +65,8 @@ export class GepHeader extends BasePage {
   }
 
   /** True when the header shows the account menu. Waits only until the header shows either Sign In or the menu. */
-  async isLoggedIn(timeout = 3000): Promise<boolean> {
+  // Returns as soon as the header renders; the long cap only matters because pages open without waiting for "load".
+  async isLoggedIn(timeout = 15000): Promise<boolean> {
     await this.isVisibleWithin(this.headerAccountMenu.or(this.headerSignInButton), timeout);
     return this.isVisibleWithin(this.headerAccountMenu, 0);
   }

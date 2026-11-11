@@ -31,6 +31,11 @@ export class GepShoppingCartPage extends BasePage {
     return this.page.locator('[data-test-id="cart_button_shippingbilling"]');
   }
 
+  // Tosca: (not in export) Shopping Cart > Text Form Required*   | required "test*" text field on a cart line; blocks Proceed To Shipping & Billing until filled
+  private get cartRequiredTextInputs(): Locator {
+    return this.page.getByRole('textbox', { name: /^Text Form Required/ });
+  }
+
   // Tosca: Fetch the cart subtotal after new product is added > SubTotal   | order summary "Subtotal", e.g. "$ 99.99"
   private get cartSubtotalText(): Locator {
     return this.page.locator('.subTotalPriceValue .subFinalPrice').first();
@@ -66,6 +71,21 @@ export class GepShoppingCartPage extends BasePage {
     await this.expectVisible(this.cartClearBasketLink);
     await this.click(this.cartClearBasketLink);
     await this.expectHidden(this.cartClearBasketLink);
+  }
+
+  /** Fills the required text field of every cart line that has one (not in Tosca), e.g. items added by Reorder. */
+  async fillRequiredTextFieldsIfShown(value: string): Promise<number> {
+    if (!(await this.isVisibleWithin(this.cartRequiredTextInputs, 3000))) return 0;
+    const count = await this.countOf(this.cartRequiredTextInputs);
+    let filled = 0;
+    for (let index = 0; index < count; index++) {
+      const input = this.cartRequiredTextInputs.nth(index);
+      // Skip hidden copies of the field: typing into one waits for the full action timeout on every key.
+      if (!(await this.isVisibleWithin(input, 0))) continue;
+      await this.typeLikeUser(input, value);
+      filled++;
+    }
+    return filled;
   }
 
   /** Tosca: Navigate to shipping and billing page, including the cart popups. */
