@@ -27,12 +27,15 @@ function read(name: string): string {
 /** Run settings from .env (or the CI environment). */
 export const ENV = {
   timeout: Number(read('TIMEOUT')) || 60000,
+  // Default wait of expect() checks (expect.timeout in playwright.config.ts; global setup / teardown use it too).
+  expectTimeout: 10000,
   // Headed locally so the run can be watched; headless on CI or with HEADLESS=true.
   headless: !!process.env.CI || read('HEADLESS') === 'true',
   // CHROME_PROFILE=true: GEP tests reuse one Chrome profile folder (cache kept between tests) instead of a fresh browser.
   chromeProfile: read('CHROME_PROFILE') === 'true',
-  // SIGN_IN_ONCE=true: sign in once per market before the first test (auth setup) and sign out after the last one
-  // (auth teardown); the tests start from that saved session instead of signing out and in each time.
+  // SIGN_IN_ONCE=true: sign in once per market before the first test (global setup, src/setup) and sign out after
+  // the last one (global teardown); the tests start from that saved session instead of signing out and in each time.
+  // Setup and teardown are not tests, so they do not appear in the test count.
   signInOnce: read('SIGN_IN_ONCE') === 'true',
   // VIDEO (off | on | retain-on-failure | on-first-retry). Default: retain-on-failure on CI, off locally, because
   // live video encoding slows a run a lot on low-end laptops. Traces and screenshots of failures are still kept.
@@ -47,7 +50,7 @@ export const ENV = {
 /** Folder of the saved login sessions (git-ignored; holds login cookies). */
 export const AUTH_DIR = path.resolve(__dirname, '..', '..', '.auth');
 
-/** Saved session (cookies + local storage) of one environment + market, written by the auth setup. */
+/** Saved session (cookies + local storage) of one environment + market, written by the global setup. */
 export function authFileFor(env: TestEnv, marketId: MarketId): string {
   return path.join(AUTH_DIR, `${env}-${marketId}.json`);
 }

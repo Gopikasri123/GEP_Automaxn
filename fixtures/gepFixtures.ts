@@ -98,8 +98,8 @@ export const test = base.extend<GepOptions & GepFixtures>({
   testEnv: ['qa', { option: true }],
   marketId: ['us', { option: true }],
 
-  // SIGN_IN_ONCE=true: start from the session the auth setup saved for this market (cookies + local storage).
-  // No file yet (e.g. the setup itself) = a fresh browser. The Chrome profile keeps its own cookies instead.
+  // SIGN_IN_ONCE=true: start from the session the global setup (src/setup) saved for this market (cookies + local
+  // storage). No file = a fresh browser. The Chrome profile keeps its own cookies instead.
   storageState: async ({ testEnv, marketId, storageState }, use) => {
     const authFile = authFileFor(testEnv, marketId);
     use(ENV.signInOnce && fs.existsSync(authFile) ? authFile : storageState);

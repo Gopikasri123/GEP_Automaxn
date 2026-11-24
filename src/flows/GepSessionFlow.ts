@@ -44,7 +44,7 @@ export class GepSessionFlow {
         throw new Error(`SIGN_IN_ONCE=true shares the '${DEFAULT_USER_KEY}' user's session; run this '${userKey}' test without it.`);
       }
       if (await header.isLoggedIn()) {
-        test.info().annotations.push({ type: 'session', description: 'Signed in from the saved session (SIGN_IN_ONCE)' });
+        annotate('session', 'Signed in from the saved session (SIGN_IN_ONCE)');
         return;
       }
     }
@@ -57,15 +57,24 @@ export class GepSessionFlow {
 
   /**
    * Tosca: Post condition CloseBrowser (signs out on Gen Z sites only).
-   * SIGN_IN_ONCE=true: skipped, so the shared session stays valid; the auth teardown signs out after the last test.
+   * SIGN_IN_ONCE=true: skipped, so the shared session stays valid; the global teardown signs out after the last test.
    */
   async signOutAtEnd(): Promise<void> {
     if (ENV.signInOnce) return;
     await this.deps.region.signOutAtEnd(this.deps.header);
   }
 
-  /** Signs out if signed in (the auth teardown, after the last test). */
+  /** Signs out if signed in (the global teardown, after the last test). */
   async signOut(): Promise<void> {
     await this.deps.header.signOutIfLoggedIn();
+  }
+}
+
+/** Adds a note to the running test's report; does nothing outside a test (global setup / teardown). */
+function annotate(type: string, description: string): void {
+  try {
+    test.info().annotations.push({ type, description });
+  } catch {
+    // test.info() throws outside a test.
   }
 }

@@ -13,6 +13,8 @@
 // Linking and markers (see CLAUDE.md):
 //   // @manual manual-test-cases/<file>.md         in the spec, above the test(s) it applies to
 //   // @flow-deviation <step or a-b>: <reason>     right above a merged step range, or where an uncoded step would be
+//   // @flow-hook <step or a-b>: <beforeEach|afterEach> (…)   where a Precondition / Post-condition step would be, when
+//                                                  the describe's test.beforeEach / test.afterEach does it for every test
 //
 // Usage:  node verify_flow.mjs [filter ...] [--no-ai] [--no-fix] [--runtime]
 //   filter      part of a manual test case file name, e.g. TC01
@@ -95,6 +97,7 @@ function parseManual(file) {
 
 const STEP_RE = /test\.step\(\s*[`'"]\s*Steps?\s+(\d+(?:\.\d+)?)(?:\s*[-–]\s*(\d+(?:\.\d+)?))?\s*:/;
 const DEVIATION_RE = /\/\/\s*@flow-deviation\s+(\d+(?:\.\d+)?)(?:\s*[-–]\s*(\d+(?:\.\d+)?))?\s*:\s*(.+)$/;
+const HOOK_RE = /\/\/\s*@flow-hook\s+(\d+(?:\.\d+)?)(?:\s*[-–]\s*(\d+(?:\.\d+)?))?\s*:\s*(.+)$/;
 const MANUAL_RE = /@manual\s+(\S+\.md)/;
 
 function listSpecs(dir) {
@@ -122,8 +125,10 @@ function findSpecEntries(manualFile) {
       linked = true;
       const step = line.match(STEP_RE);
       const deviation = line.match(DEVIATION_RE);
+      const hook = line.match(HOOK_RE);
       if (step) entries.push({ kind: "step", line: index + 1, range: toRange(step[1], step[2]), text: line.trim() });
       if (deviation) entries.push({ kind: "deviation", line: index + 1, range: toRange(deviation[1], deviation[2]), reason: deviation[3].trim() });
+      if (hook) entries.push({ kind: "hook", line: index + 1, range: toRange(hook[1], hook[2]), reason: hook[3].trim() });
     });
     if (linked) return { spec: norm(spec), entries };
   }
@@ -142,15 +147,20 @@ function checkStructure(manual, specInfo) {
 
   const steps = specInfo.entries.filter((e) => e.kind === "step");
   const deviations = specInfo.entries.filter((e) => e.kind === "deviation");
+  // Steps done by the describe's beforeEach / afterEach hook count as covered, like an uncoded step with a reason.
+  const hooks = specInfo.entries.filter((e) => e.kind === "hook");
   const deviationFor = (range) => deviations.find((d) => rangeCovers(d.range, fmt(range.from)) && (range.to.whole ? rangeCovers(d.range, `${range.to.major}`) : rangeCovers(d.range, fmt(range.to))));
 
   for (const m of manual.steps) {
     const coveringSteps = steps.filter((s) => rangeCovers(s.range, m.id));
     const coveringDeviation = deviations.find((d) => rangeCovers(d.range, m.id));
+    const coveringHook = hooks.find((h) => rangeCovers(h.range, m.id));
     // A sub-step is covered by its parent step; only top-level steps can be "duplicated".
     const topLevel = parseId(m.id).whole;
-    if (!coveringSteps.length && !coveringDeviation) {
-      issues.push({ step: m.id, line: null, type: "missing", reason: `Manual step ${m.id} ("${m.action}") has no test.step and no @flow-deviation` });
+    if (!coveringSteps.length && !coveringDeviation && !coveringHook) {
+      issues.push({ step: m.id, line: null, type: "missing", reason: `Manual step ${m.id} ("${m.action}") has no test.step, @flow-hook or @flow-deviation` });
+    } else if (coveringHook && coveringSteps.length) {
+      issues.push({ step: m.id, line: coveringSteps[0].line, type: "duplicate", reason: `Manual step ${m.id} is done by the ${coveringHook.reason.split(/\s/)[0]} hook (line ${coveringHook.line}) and again by a test.step (line ${coveringSteps[0].line})` });
     } else if (topLevel && coveringSteps.length > 1) {
       issues.push({ step: m.id, line: coveringSteps[1].line, type: "duplicate", reason: `Manual step ${m.id} is covered by ${coveringSteps.length} test.step blocks (lines ${coveringSteps.map((s) => s.line).join(", ")})` });
     }
@@ -197,6 +207,11 @@ function deviationList(specInfo) {
   return devs.length ? devs.map((d) => `- steps ${rangeText(d.range)} (line ${d.line}): ${d.reason}`).join("\n") : "- none";
 }
 
+function hookList(specInfo) {
+  const hooks = specInfo.entries.filter((e) => e.kind === "hook");
+  return hooks.length ? hooks.map((h) => `- steps ${rangeText(h.range)} (marker at line ${h.line}): ${h.reason}`).join("\n") : "- none";
+}
+
 /** Check B: an independent, read-only reviewer compares each manual step with the code. */
 function reviewSemantics(manual, specInfo) {
   const prompt = [
@@ -208,6 +223,9 @@ function reviewSemantics(manual, specInfo) {
     "(an action-only step still needs a check that it landed). The step numbers in test.step titles must refer to the right manual steps.",
     "These differences are ACCEPTED (marked // @flow-deviation in the spec) — do not report them unless the code contradicts the reason:",
     deviationList(specInfo),
+    "These steps are done by the enclosing describe's test.beforeEach / test.afterEach hook (marked // @flow-hook) for every test,",
+    "with unnumbered 'Precondition: …' / 'Post-condition: …' step titles — check them in that hook, not in the test body:",
+    hookList(specInfo),
     "Do not report: locator choices, code style, steps a Playwright test cannot express that are covered by an accepted deviation,",
     "or the manual test case's derived / open-question sections. Report only real mismatches.",
     'Answer with ONLY one JSON object in a ```json block: {"verdict":"pass"|"fail","issues":[{"step":"<manual step id>",',
@@ -233,6 +251,8 @@ function fixFlow(manual, specInfo, issues) {
     "('Step N: …' / 'Steps a-b: …'), locators only as private getters in page objects with the Tosca comment, actions through BasePage,",
     "data in data/, credentials from .env. A merged range or an uncoded step is only allowed with '// @flow-deviation <steps>: <reason>'",
     "when the manual test case's notes justify it or Playwright cannot do it; otherwise implement the step.",
+    "Precondition / Post-condition steps shared by every test in a describe belong in its test.beforeEach / test.afterEach,",
+    "marked in each test with '// @flow-hook <steps>: beforeEach|afterEach (…)'.",
     "If a step needs a locator you cannot see, use this.todo(...) in the page object rather than guessing. Do not run any tests.",
     "Problems found:",
     ...issues.map((i) => `- step ${i.step}${i.line ? ` (spec line ${i.line})` : ""} [${i.type}]: ${i.reason}`),
@@ -261,7 +281,8 @@ function checkRuntime(manual, specInfo) {
         const result = (t.results ?? []).at(-1);
         if (!result) continue;
         const ran = (result.steps ?? []).map((s) => s.title.match(/^Steps?\s+(\d+(?:\.\d+)?)(?:\s*[-–]\s*(\d+(?:\.\d+)?))?\s*:/)).filter(Boolean).map((m) => toRange(m[1], m[2]));
-        const uncoded = specInfo.entries.filter((e) => e.kind === "deviation" && !specInfo.entries.some((s) => s.kind === "step" && rangeCovers(s.range, fmt(e.range.from))));
+        // Hook steps run under "Before / After Hooks" with unnumbered titles, so they count like uncoded steps here.
+        const uncoded = specInfo.entries.filter((e) => (e.kind === "deviation" || e.kind === "hook") && !specInfo.entries.some((s) => s.kind === "step" && rangeCovers(s.range, fmt(e.range.from))));
         const notRun = manual.steps.filter((m) => !ran.some((r) => rangeCovers(r, m.id)) && !uncoded.some((d) => rangeCovers(d.range, m.id))).map((m) => m.id);
         const why = [...(t.annotations ?? []), ...(result.annotations ?? [])].find((a) => a.type === "skip")?.description;
         rows.push({ test: spec.title, status: result.status, notRun, why });
@@ -300,6 +321,10 @@ function writeReviewFile(manual, specInfo, issues, attempts, stopReason) {
     "## Accepted deviations in the spec",
     "",
     specInfo ? deviationList(specInfo) : "- none",
+    "",
+    "## Steps done by beforeEach / afterEach hooks",
+    "",
+    specInfo ? hookList(specInfo) : "- none",
     "",
   ].join("\n");
   writeFileSync(file, out);

@@ -8,6 +8,7 @@ below). Read this file fully before editing anything. These rules override conve
 When the user uploads, attaches or pastes a **Tosca execution report** (or a manual test case extracted from one),
 use the `tosca-report-to-playwright` skill: convert it to a manual test case and straight on to a Playwright test,
 **without stopping for review**, then report what was created. The user does not need to ask.
+When the user gives a **Tosca subset export (.tsu file)**, use the `tosca-tsu-to-playwright` skill the same way.
 
 ## Loop 2: flow check (started by `verify_flow.mjs`)
 `verify_flow.mjs` checks that each Playwright test follows its manual test case (`manual-test-cases/*.md`) step by step.
@@ -22,6 +23,8 @@ The heal-only rules further down apply to `heal_single_TS.mjs` runs; when starte
 - A merged range, or a step with no code of its own (e.g. "close the browser"), needs
   `// @flow-deviation <step or a-b>: <reason>` directly above it (or where the step would be). Only use it when the manual
   case's own notes justify it or Playwright cannot do the step; otherwise implement the step.
+- Precondition / Post-condition steps done by the describe's `test.beforeEach` / `test.afterEach` are marked in each test
+  with `// @flow-hook <step or a-b>: beforeEach|afterEach (…)` where they would be (see "Setup and teardown" below).
 - Keep the framework conventions below (private locators with the Tosca comment, BasePage methods, data in `data/`,
   credentials from `.env`). If a locator cannot be seen, use `this.todo(...)` rather than guessing.
 
@@ -35,8 +38,20 @@ The heal-only rules further down apply to `heal_single_TS.mjs` runs; when starte
   - Demo Web Shop: `src/demo/components/`, `src/demo/pages/`
 - Shared base class: `src/core/BasePage.ts` (all clicks, fills and checks go through its methods).
 - Flows `src/flows/`, `src/demo/flows/`; regions (Gen X / Y / Z) `src/regions/`; test data `data/`; fixtures `fixtures/`.
+- Global setup / teardown (sign in once per run): `src/setup/`.
 - Machine-readable last run: `test-results/results.json` (Playwright JSON reporter).
 - Locator checklist: `LOCATORS_TODO.md`, generated from the code by `npm run locators`.
+
+## Setup and teardown (hooks, never tests)
+- Per test: the shared Precondition (launch the site, sign in, clear the cart) is the describe's `test.beforeEach`, and
+  the Post-condition (sign out on Gen Z) is its `test.afterEach`, with unnumbered `Precondition: …` / `Post-condition: …`
+  steps (`tests/orders/GEP_Orders.spec.ts`). `afterEach` runs also after a failure and records its own errors as an
+  annotation, so they never hide the test's error. Test bodies hold only the numbered business steps.
+- Per run, `SIGN_IN_ONCE=true`: Playwright `globalSetup` / `globalTeardown` (`src/setup/`) sign in once per market,
+  save the session to `.auth/`, and sign out / delete it after the last test. They are not tests and are not counted.
+  A setup failure stops the run (screenshot `test-results/global-setup-<env>-<market>.png`); a teardown sign-out failure
+  is only a warning.
+- Never write setup or teardown as a `test(...)` or as a Playwright project.
 
 ## Framework conventions a heal must keep
 - Every locator getter has a comment directly above it: `// Tosca: <module> > <control>   | <hint>`

@@ -10,21 +10,40 @@ test.describe('GEP Orders', () => {
   // Full E2E (login, order, verify in order history) on the QA sites is slow.
   test.describe.configure({ timeout: 10 * 60 * 1000 });
 
+  // Tosca Precondition (manual steps 1-3 of every test below): runs before each test, shown under "Before Hooks".
+  // Every test signs in as the default user; a test that needs another user goes in its own describe with its own hook.
+  test.beforeEach(async ({ session, cart }) => {
+    // Open the site for the selected market and close the cookie / domain / launch popups.
+    await test.step('Precondition: Launch the website and clear the launch popups', () => session.openSite());
+    // Sign in with the user from the test data (SIGN_IN_ONCE: reuse the saved session) and wait for the account menu.
+    await test.step('Precondition: Sign in', () => session.login());
+    // Start from an empty cart so only this test's products are ordered.
+    await test.step('Precondition: Clear the cart if it is not empty', () => cart.emptyCart());
+  });
+
+  // Tosca Post condition (the last manual step of every test below): runs after each test, also when it failed,
+  // shown under "After Hooks". Gen Z sites sign out, Gen X / Y just close the browser.
+  test.afterEach(async ({ session }, testInfo) => {
+    await test.step('Post-condition: Sign out', async () => {
+      if (testInfo.status === testInfo.expectedStatus) return session.signOutAtEnd();
+      // The test already failed: still try to sign out, but don't add a second error to its report
+      // (the heal script reads the errors, and a sign-out error would hide the real failure).
+      await session.signOutAtEnd().catch((error: Error) => {
+        testInfo.annotations.push({
+          type: 'post-condition',
+          description: `Sign-out after the failure did not finish: ${error.message.split('\n')[0]}`,
+        });
+      });
+    });
+  });
+
   test('GEP2-36899 | Verify submitted order in My order page @GEP2-36899 @GEP @orders @placesOrder @regression', async ({
-    session,
     cart,
     checkout,
     orderHistory,
     marketData,
   }) => {
-    // Open the site for the selected market and close the cookie / domain / launch popups.
-    await test.step('Step 1: Launch the website and clear the launch popups', () => session.openSite());
-
-    // Sign in with the user from .env (GEP2_36899 override if set) and wait until the account menu shows.
-    await test.step('Step 2: Sign in', () => session.login());
-
-    // Start from an empty cart so only this test's product is ordered.
-    await test.step('Step 3: Clear the cart if it is not empty', () => cart.emptyCart());
+    // @flow-hook 1-3: beforeEach (launch the website, sign in, clear the cart)
 
     // Search the product by its ID and open its product page (PDP).
     await test.step('Step 4: Search for the product and open its product page', () =>
@@ -57,26 +76,17 @@ test.describe('GEP Orders', () => {
     await test.step(`Step 12: Verify order ${orderNumber} is listed in Submitted Orders`, () =>
       orderHistory.findSubmittedOrder(orderNumber));
 
-    // Tosca post condition: Gen Z sites sign out, Gen X/Y just close the browser.
-    await test.step('Step 13: Post-condition: sign out', () => session.signOutAtEnd());
+    // @flow-hook 13: afterEach (post-condition: sign out)
   });
 
   test('GEP2-18230 | E2E of the Reorder option from an order on the Order History page @GEP2-18230 @GEP @orders @reorder @placesOrder @regression', async ({
-    session,
     cart,
     checkout,
     orderHistory,
     orderDetailsPage,
     marketData,
   }) => {
-    // Open the site for the selected market and close the cookie / domain / launch popups.
-    await test.step('Step 1: Launch the website and clear the launch popups', () => session.openSite());
-
-    // Sign in with the user from .env and wait until the account menu shows.
-    await test.step('Step 2: Sign in', () => session.login());
-
-    // Start from an empty cart so only the reordered items are ordered.
-    await test.step('Step 3: Clear the cart if it is not empty', () => cart.emptyCart());
+    // @flow-hook 1-3: beforeEach (launch the website, sign in, clear the cart so only the reordered items are ordered)
 
     // Open My Orders from the header "Orders & Returns" button (Submitted Orders tab).
     await test.step('Step 4: Open My Orders', () => orderHistory.openMyOrders());
@@ -116,25 +126,16 @@ test.describe('GEP Orders', () => {
     await test.step(`Step 15: Verify the order status is "${marketData.expectedOrderStatus}"`, () =>
       orderDetailsPage.expectOrderStatus(marketData.expectedOrderStatus));
 
-    // Tosca post condition: Gen Z sites sign out, Gen X/Y just close the browser.
-    await test.step('Step 16: Post-condition: sign out', () => session.signOutAtEnd());
+    // @flow-hook 16: afterEach (post-condition: sign out)
   });
 
   test('GEP2-18257 | Verify user able to see the orders on Future & Recurring Tab @GEP2-18257 @GEP @orders @recurring @placesOrder @regression', async ({
-    session,
     cart,
     checkout,
     orderHistory,
     marketData,
   }) => {
-    // Open the site for the selected market and close the cookie / domain / launch popups.
-    await test.step('Step 1: Launch the website and clear the launch popups', () => session.openSite());
-
-    // Sign in with the user from .env and wait until the account menu shows.
-    await test.step('Step 2: Sign in', () => session.login());
-
-    // Start from an empty cart so only this test's product is ordered.
-    await test.step('Step 3: Clear the cart if it is not empty', () => cart.emptyCart());
+    // @flow-hook 1-3: beforeEach (launch the website, sign in, clear the cart)
 
     // Search the product by its ID and open its product page (PDP).
     await test.step('Step 4: Search for the product and open its product page', () =>
@@ -177,12 +178,10 @@ test.describe('GEP Orders', () => {
     await test.step(`Step 12: Verify order ${orderNumber} is listed in Future & Recurring with Manage Upcoming`, () =>
       orderHistory.findRecurringOrder(orderNumber));
 
-    // Tosca post condition: Gen Z sites sign out, Gen X/Y just close the browser.
-    await test.step('Step 13: Post-condition: sign out', () => session.signOutAtEnd());
+    // @flow-hook 13: afterEach (post-condition: sign out)
   });
 
   test('GEP2-22324 | End-to-End flow for UOM display on Order History page @GEP2-22324 @GEP @orders @uom @placesOrder @regression', async ({
-    session,
     cart,
     checkout,
     orderHistory,
@@ -193,14 +192,7 @@ test.describe('GEP Orders', () => {
     // Tosca: TDM Condition == 'Productwith2UOM', stored as UOMProductID (data/marketData.ts).
     const uomProductId = marketData.products.twoUom;
 
-    // Open the site for the selected market and close the cookie / domain / launch popups.
-    await test.step('Step 1: Launch the website and clear the launch popups', () => session.openSite());
-
-    // Sign in with the user from .env and wait until the account menu shows.
-    await test.step('Step 2: Sign in', () => session.login());
-
-    // Start from an empty cart so only this test's product is ordered.
-    await test.step('Step 3: Clear the cart if it is not empty', () => cart.emptyCart());
+    // @flow-hook 1-3: beforeEach (launch the website, sign in, clear the cart)
 
     // Search the two-UOM product by its ID and open its product page (PDP).
     await test.step(`Step 4: Search for the two-UOM product ${uomProductId} and open its product page`, () =>
@@ -240,11 +232,10 @@ test.describe('GEP Orders', () => {
       await region.expectUomOnOrder(orderDetailsPage, uomProductId);
     });
 
-    // Tosca post condition: Gen Z sites sign out, Gen X/Y just close the browser.
-    await test.step('Step 15: Post-condition: sign out', () => session.signOutAtEnd());
+    // @flow-hook 15: afterEach (post-condition: sign out)
   });
- test('GEP2-18559 | Place Order from Unplaced Order section @GEP2-18559 @GEP @orders @unplacedOrders @placesOrder @regression', async ({
-    session,
+
+  test('GEP2-18559 | Place Order from Unplaced Order section @GEP2-18559 @GEP @orders @unplacedOrders @placesOrder @regression', async ({
     cart,
     checkout,
     orderHistory,
@@ -254,14 +245,7 @@ test.describe('GEP Orders', () => {
     region,
     marketData,
   }) => {
-    // Open the site for the selected market and close the cookie / domain / launch popups.
-    await test.step('Step 1: Launch the website and clear the launch popups', () => session.openSite());
-
-    // Sign in with the user from .env and wait until the account menu shows.
-    await test.step('Step 2: Sign in', () => session.login());
-
-    // Start from an empty cart so the unplaced order only holds this test's product.
-    await test.step('Step 3: Clear the cart if it is not empty', () => cart.emptyCart());
+    // @flow-hook 1-3: beforeEach (launch the website, sign in, clear the cart so the unplaced order only holds this product)
 
     // Search the product by its ID and open its product page (PDP).
     await test.step('Step 4: Search for the product and open its product page', () =>
@@ -323,8 +307,6 @@ test.describe('GEP Orders', () => {
     // Click "Submit Your Order" and check "Your order has been submitted".
     await test.step('Step 16: Submit the order and verify the order confirmation', () => checkout.submitOrder());
 
-    // Tosca post condition: Gen Z sites sign out, Gen X/Y just close the browser.
-    await test.step('Step 17: Post-condition: sign out', () => session.signOutAtEnd());
+    // @flow-hook 17: afterEach (post-condition: sign out)
   });
-  
 });

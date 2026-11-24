@@ -77,6 +77,18 @@ FLOW-CHECK MARKERS (this repo — checked by verify_flow.mjs, Loop 2)
   `// @flow-deviation <step or a-b>: <reason>` directly above it (or where the step would be). These are the
   Deviations listed in OUTPUT 4.
 
+SETUP AND TEARDOWN (this repo — hooks, not test steps)
+- Precondition and Post-condition steps that every test in a describe shares (Tosca Precondition / Postcondition
+  reusable blocks: launch the site, sign in, clear the cart; sign out / close the browser) go in the describe's
+  `test.beforeEach` / `test.afterEach`, as unnumbered `test.step('Precondition: …')` / `test.step('Post-condition: …')`.
+  See `tests/orders/GEP_Orders.spec.ts`. In each test, mark where those steps would be with
+  `// @flow-hook <step or a-b>: beforeEach (…)` / `// @flow-hook <N>: afterEach (…)` instead of numbered steps.
+- `afterEach` runs also when the test failed: catch errors there and record them as an annotation, so they do not
+  hide the test's real error (the heal script reads the errors).
+- A test whose precondition differs (another user, another start page) goes in its own describe with its own hooks.
+- Sign-in-once (SIGN_IN_ONCE=true) is the global setup / teardown in `src/setup/`; never write setup or teardown as a
+  `test(...)`, so it is never counted as a test.
+
 TEST HYGIENE
 - Credentials and environment-specific values come from the framework's existing
   config or env handling, never inline in the spec.

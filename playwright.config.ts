@@ -26,8 +26,14 @@ export default defineConfig<GepOptions>({
   testDir: './tests',
   timeout: ENV.timeout,
   expect: {
-    timeout: 10000,
+    timeout: ENV.expectTimeout,
   },
+
+  // SIGN_IN_ONCE=true: sign in once per market before the first test and sign out after the last one (src/setup).
+  // These run outside the test list, so they are not counted as tests. Not run by `playwright test --list`.
+  ...(ENV.signInOnce
+    ? { globalSetup: './src/setup/globalSetup.ts', globalTeardown: './src/setup/globalTeardown.ts' }
+    : {}),
   // Tests share one account (and so one cart) per market, so they run one after another.
   fullyParallel: false,
   workers: 1,
@@ -57,19 +63,13 @@ export default defineConfig<GepOptions>({
     ...selectedMarketIds(testEnv).flatMap((marketId) => {
       const name = `${testEnv}-${marketId}`;
       const use = { ...desktopChrome, ...browserWindow, testEnv, marketId };
-      const tests = {
-        name,
-        // GEP tests place real orders: on prod only the tests tagged @prod-safe run.
-        ...(testEnv === 'prod' ? { grep: /@prod-safe/ } : {}),
-        use,
-      };
-      if (!ENV.signInOnce) return [tests];
-      // SIGN_IN_ONCE=true: <name>-auth-setup signs in once and saves the session before the tests,
-      // <name>-auth-teardown signs out after the last one (tests/auth).
       return [
-        { name: `${name}-auth-setup`, testMatch: /auth\.setup\.ts/, teardown: `${name}-auth-teardown`, use },
-        { name: `${name}-auth-teardown`, testMatch: /auth\.teardown\.ts/, use },
-        { ...tests, dependencies: [`${name}-auth-setup`] },
+        {
+          name,
+          // GEP tests place real orders: on prod only the tests tagged @prod-safe run.
+          ...(testEnv === 'prod' ? { grep: /@prod-safe/ } : {}),
+          use,
+        },
       ];
     }),
   ],

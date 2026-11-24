@@ -30,6 +30,7 @@ src/
   regions/     GEN_X / GEN_Y / GEN_Z differences (launch popups, payment, PO rule, UOM, sign out)
   flows/       GepSessionFlow, GepCartFlow, GepCheckoutFlow, GepOrderHistoryFlow
   utils/       dataHelpers (random data, dates, cache-buster), GepDatePicker (picks a date in any calendar field)
+  setup/       globalSetup.ts / globalTeardown.ts: sign in once per run (SIGN_IN_ONCE=true), not tests
 data/          testCases.ts, marketData.ts (products, expected status per env + market), common.ts, orderStatus.ts
 db/            schema.sql: tables of the test data database (site profiles and login users)
 fixtures/      gepFixtures.ts: gives each test its market, pages and flows
@@ -39,23 +40,34 @@ scripts/       generate-locators-report.js (builds LOCATORS_TODO.md)
 
 A test only talks to flows (and a page for a step unique to that test). Every line is a numbered
 `test.step` with a comment explaining it, so the test reads like the Tosca test case and the HTML report
-shows the same step names:
+shows the same step names. The Tosca Precondition (launch, sign in, clear the cart) and Post-condition (sign out)
+are shared `beforeEach` / `afterEach` hooks, shown in the report under "Before Hooks" / "After Hooks":
 
 ```ts
-test('GEP2-36899 | Verify submitted order in My order page @GEP2-36899 ...', async ({ session, cart, checkout, orderHistory, marketData }) => {
-  // Open the site for the selected market and close the cookie / domain / launch popups.
-  await test.step('Step 1: Launch the website and clear the launch popups', () => session.openSite());
+test.beforeEach(async ({ session, cart }) => {
+  await test.step('Precondition: Launch the website and clear the launch popups', () => session.openSite());
+  await test.step('Precondition: Sign in', () => session.login());
+  await test.step('Precondition: Clear the cart if it is not empty', () => cart.emptyCart());
+});
+test.afterEach(async ({ session }) => { /* 'Post-condition: Sign out' (also after a failure) */ });
 
-  // Sign in with the market's default user (test data database) and wait until the account menu shows.
-  await test.step('Step 2: Sign in', () => session.login());
+test('GEP2-36899 | Verify submitted order in My order page @GEP2-36899 ...', async ({ cart, checkout, orderHistory, marketData }) => {
+  // @flow-hook 1-3: beforeEach (launch the website, sign in, clear the cart)
   ...
   // Click "Submit Your Order", check "Your order has been submitted" and read the order number.
   const orderNumber = await test.step('Step 10: Submit the order and capture the order number', () => checkout.submitOrder());
   ...
+  // @flow-hook 13: afterEach (post-condition: sign out)
 });
 ```
 
 Flows don't create report steps themselves; the Playwright actions (click, fill, expect) appear under each test step.
+
+### Sign in once per run (`SIGN_IN_ONCE=true`)
+`src/setup/globalSetup.ts` signs in once per market **before the first test** and saves the session to `.auth/`;
+`src/setup/globalTeardown.ts` signs out (Gen Z) and deletes it **after the last test**. They are Playwright global
+setup / teardown, not tests, so they are not counted in the results. A setup failure stops the run before any order
+is placed (screenshot in `test-results/global-setup-<env>-<market>.png`). Works with `CHROME_PROFILE=true` too.
 
 ## Test cases
 

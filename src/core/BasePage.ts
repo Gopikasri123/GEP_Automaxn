@@ -122,7 +122,7 @@ export abstract class BasePage {
     await locator.press('Delete');
     await locator.pressSequentially(value, { delay: 30 });
     await locator.press('Tab');
-    await expect(locator).toHaveValue(value);
+    await expect(locator).toHaveValue(value, timeoutOption());
   }
 
   /** Clicks an element that starts a file download and returns the download once it has started. */
@@ -206,7 +206,19 @@ export abstract class BasePage {
   }
 }
 
-/** Passes a timeout only when one is given, so the configured default applies otherwise. */
+/**
+ * Default wait for checks that run outside a test (global setup / teardown, src/setup). Inside a test the
+ * config's expect.timeout applies; outside one Playwright falls back to 5 s, too short for the QA login pages.
+ * Workers are separate processes, so setting this in the global setup never changes the tests.
+ */
+let outsideTestTimeout: number | undefined;
+
+export function setExpectTimeoutOutsideTests(timeout: number): void {
+  outsideTestTimeout = timeout;
+}
+
+/** Passes a timeout only when one is given (or set for global setup), so the configured default applies otherwise. */
 function timeoutOption(timeout?: number): { timeout: number } | undefined {
-  return timeout === undefined ? undefined : { timeout };
+  const value = timeout ?? outsideTestTimeout;
+  return value === undefined ? undefined : { timeout: value };
 }
