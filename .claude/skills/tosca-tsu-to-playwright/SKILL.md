@@ -63,8 +63,10 @@ excluded.
 Where the code goes, by the application under test (from the OpenUrl value):
 - **GEP (Henry Schein, `*.eschein.com`)**: the existing GEP code: pages `src/pages/`, components `src/components/`,
   flows `src/flows/`, regions `src/regions/`, data `data/testCases.ts` / `data/marketData.ts`, fixtures
-  `fixtures/gepFixtures.ts`, specs `tests/orders/` (or a new `tests/<area>/`). **Never run** GEP tests: they place
-  real orders.
+  `fixtures/gepFixtures.ts`. Specs: **one file per feature area**, `tests/<area>/GEP_<Area>.spec.ts`, chosen by what
+  the test mainly validates; add to the area's file when it exists, else create the folder and file (rules: `CLAUDE.md`,
+  "GEP test placement"). Data per area: `data/<area>TestCases.ts` (`orders`: `data/testCases.ts`). **Never run** GEP
+  tests: they place real orders.
 - **Any other application** (`<app>` = short lower-case name, e.g. `demo`, `zoho`): create, the first time, and reuse
   after that:
   - `src/<app>/pages/`, `src/<app>/components/`, `src/<app>/flows/`, and `src/<app>/config.ts` (base URL and

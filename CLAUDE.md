@@ -31,7 +31,8 @@ The heal-only rules further down apply to `heal_single_TS.mjs` runs; when starte
 ## Repo layout
 - **Two applications**, both tested against **remote sites**. The application source code is **not** in this repo.
   - **GEP** (Henry Schein web shops): US QA `https://www.us.qa.eschein.com/en-us`, UK QA `https://www.uk.qa.eschein.com/`
-    (profiles in `src/config/markets.ts`). Tests: `tests/orders/GEP_Orders.spec.ts`.
+    (profiles in `src/config/markets.ts`). Tests: one spec per feature area, `tests/<area>/GEP_<Area>.spec.ts`
+    (e.g. `tests/orders/GEP_Orders.spec.ts`); see "GEP test placement" below.
   - **Demo Web Shop**: `https://demowebshop.tricentis.com` (project `demo-webshop`). Tests: `tests/demo/`.
 - Locators live **only** in page objects and components, as `private` getters (or private methods taking a value):
   - GEP: `src/pages/`, `src/components/` (incl. `popups/`, `orders/`), `src/utils/GepDatePicker.ts`
@@ -41,6 +42,35 @@ The heal-only rules further down apply to `heal_single_TS.mjs` runs; when starte
 - Global setup / teardown (sign in once per run): `src/setup/`.
 - Machine-readable last run: `test-results/results.json` (Playwright JSON reporter).
 - Locator checklist: `LOCATORS_TODO.md`, generated from the code by `npm run locators`.
+
+## GEP test placement (one spec file per feature area)
+Every GEP conversion (skills `tosca-tsu-to-playwright`, `tosca-report-to-playwright`, command `manual-to-playwright`)
+files each new test by **what it mainly validates**, not by the pages it passes through:
+1. **Pick the area** from the test's purpose: its title and the expected results of its main verification steps.
+   Most GEP tests sign in, add to cart and check out just to get an order; that does not make them `checkout` tests.
+   A test that verifies the order in Order History is `orders`; one that validates the checkout page itself
+   (shipping/billing, payment, PO, review order) is `checkout`. When two areas fit, use the screen of the final
+   verification.
+2. **Reuse an existing area first**: list `tests/*/GEP_*.spec.ts` and take the one that fits, even if the name is not
+   exact. Create a new area only when none fits, never a synonym of an existing one (not `basket` next to `cart`).
+   Area names: one short lower-case word (camelCase if two), e.g. `orders`, `checkout`, `cart`, `search`, `product`,
+   `account`, `login`, `quickOrder`.
+3. **File**: `tests/<area>/GEP_<Area>.spec.ts` (`<Area>` = the area with a capital first letter, e.g.
+   `tests/checkout/GEP_Checkout.spec.ts`). If the file exists, **add the new test to it** (after the last test, inside
+   its `test.describe`); do not create a second spec for the same area. If it does not exist, create the folder and the
+   file with the same structure as `tests/orders/GEP_Orders.spec.ts`: one `test.describe('GEP <Area>')`, the shared
+   Precondition `test.beforeEach` and Post-condition `test.afterEach`, a doc comment saying what the area covers.
+   A test that needs a different precondition (another user, no cart clear) goes in its own nested `test.describe`
+   with its own hooks in the same file.
+4. **Data**: one data file per area, `data/<area>TestCases.ts` (the `orders` area keeps `data/testCases.ts`); export
+   one constant per test case (`GEP2_12345`), as in `data/testCases.ts`.
+5. **Tags**: `@<ID> @GEP @<area>` plus feature tags and `@placesOrder` when it orders, so tests can also be run across
+   areas (`--grep @placesOrder`).
+6. **Before adding**, search `tests/` for `@<ID>`: a test case already in any area file is already converted
+   (do not add it twice, even to a different area).
+7. Manual test cases stay flat in `manual-test-cases/<ID>.md` (`verify_flow.mjs` reads no subfolders), each spec test
+   with its own `// @manual manual-test-cases/<ID>.md` line above it.
+8. In the final report, list per test the area chosen and why (one phrase), so a reviewer can move a misfiled test.
 
 ## Setup and teardown (hooks, never tests)
 - Per test: the shared Precondition (launch the site, sign in, clear the cart) is the describe's `test.beforeEach`, and

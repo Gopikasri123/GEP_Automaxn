@@ -54,6 +54,10 @@ CONVERSION RULES
    single test run. The shared body stays shared; a variant needing its own step
    gets that step injected through the data object, not through a branch in the
    shared body.
+   GEP: the test goes into the spec file of its feature area,
+   `tests/<area>/GEP_<Area>.spec.ts`, chosen by what it mainly validates. Add it to
+   that file when it exists; create the folder and file only for a new area (rules:
+   CLAUDE.md, "GEP test placement").
 5. Tagged steps:
    - [NOT PLAYWRIGHT-SUPPORTED] — implement the alternate given in the manual case
      (runner filesystem API, API call, fixture, pre-condition). Keep it in place in

@@ -47,7 +47,10 @@ Treat that manual test case as approved: the user has chosen not to review it.
 Framework facts to respect (read the code to confirm, do not assume):
 - Demo Web Shop test cases go in `tests/demo/`, pages in `src/demo/`, data as one JSON per test case in `data/demo/`
   (loaded by `data/demo/demoTestCases.ts`), fixtures in `fixtures/demoFixtures.ts`, project `demo-webshop`.
-- GEP test cases go in `tests/orders/`, pages in `src/pages` / `src/components`, data in `data/`.
+- GEP test cases go in **one spec file per feature area**, `tests/<area>/GEP_<Area>.spec.ts`, chosen by what the test
+  mainly validates (add to the area's file when it exists, else create the folder and file; rules: `CLAUDE.md`,
+  "GEP test placement"). Pages in `src/pages` / `src/components`, data per area in `data/<area>TestCases.ts`
+  (`orders`: `data/testCases.ts`).
 - Page objects extend `src/core/BasePage.ts`, keep locators `private` with a comment naming the Tosca step above each
   getter, and act only through BasePage methods. Credentials only from `.env` via `src/config/env.ts`.
 - Capture real locators from the live site where it is reachable; otherwise leave a marked TODO (see the command).
